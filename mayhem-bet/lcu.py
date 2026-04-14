@@ -178,47 +178,109 @@ class GameMonitor:
             time.sleep(self.poll_interval)
 
 
+NAME_FIELDS = (
+    "RIOT_ID_GAME_NAME", "riotIdGameName",
+    "gameName", "GAME_NAME",
+    "summonerName", "SUMMONER_NAME",
+    "displayName",
+    "NAME",
+)
+
+DAMAGE_KEYS = (
+    "TOTAL_DAMAGE_DEALT_TO_CHAMPIONS",
+    "totalDamageDealtToChampions",
+    "CHAMPIONS_DAMAGE_DEALT",
+    "totalDamageDealtToChampionsTotal",
+)
+
+CHAMPION_FIELDS = ("championName", "CHAMPION_NAME", "skinName", "SKIN")
+
+
+def _norm(s):
+    """이름 정규화: 소문자 + 공백 제거 + 태그(#KR1) 제거."""
+    if not s:
+        return ""
+    s = str(s).split("#")[0]
+    return "".join(s.lower().split())
+
+
+def _pick(d, keys, default=""):
+    for k in keys:
+        v = d.get(k)
+        if v not in (None, "", 0):
+            return v
+    return default
+
+
+def _iter_players(eog_data):
+    """EOG 구조 변형 대응: teams[].players[] / players[] / participants[] 모두 시도."""
+    if not isinstance(eog_data, dict):
+        return
+    for team in eog_data.get("teams", []) or []:
+        for p in team.get("players", []) or []:
+            yield p
+    for p in eog_data.get("players", []) or []:
+        yield p
+    for p in eog_data.get("participants", []) or []:
+        yield p
+
+
+def _player_name(player):
+    name = _pick(player, NAME_FIELDS)
+    if name:
+        return name
+    # stats 안에 박혀있는 케이스도 있음
+    stats = player.get("stats", {}) or {}
+    return _pick(stats, NAME_FIELDS)
+
+
+def _player_damage(player):
+    stats = player.get("stats", {}) or {}
+    val = _pick(stats, DAMAGE_KEYS, 0)
+    if not val:
+        # stats 없이 평탄화된 경우
+        val = _pick(player, DAMAGE_KEYS, 0)
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _dump_eog(eog_data):
+    """이름 매칭 실패 시 실제 EOG 구조를 사용자 데이터 폴더에 저장 (디버깅용)."""
+    try:
+        from models import DB_PATH
+        out = os.path.join(os.path.dirname(DB_PATH), "last_eog_dump.json")
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(eog_data, f, ensure_ascii=False, indent=2)
+        print(f"[LCU] 매칭 실패 — 실제 EOG 구조 저장: {out}")
+    except Exception as e:
+        print(f"[LCU] EOG 덤프 실패: {e}")
+
+
 def parse_eog_damage(eog_data, participant_names):
     """
     EOG 데이터에서 참여자들의 챔피언 딜량을 추출한다.
-    
-    Args:
-        eog_data: LCU EOG stats block
-        participant_names: 내기 참여자 소환사명 리스트 (소문자 비교)
-    
-    Returns:
-        list of dict: [{"name": str, "champion": str, "damage": int}, ...]
-        순위 정렬됨 (딜량 내림차순)
+    이름은 태그(#KR1) 제거 + 공백 제거 + 소문자 비교.
+    매칭 실패 시 실제 EOG JSON을 디스크에 덤프한다.
     """
+    name_set = {_norm(n) for n in participant_names if n}
     results = []
-    teams = eog_data.get("teams", [])
+    seen_names = []
 
-    # 모든 플레이어 데이터 수집
-    all_players = []
-    for team in teams:
-        for player in team.get("players", []):
-            all_players.append(player)
-
-    # 참여자 이름 매칭 (대소문자 무시)
-    name_set = {n.lower() for n in participant_names}
-
-    for player in all_players:
-        # 소환사명 확인 (여러 필드 시도)
-        summoner_name = (
-            player.get("gameName", "") or
-            player.get("summonerName", "") or
-            ""
-        )
-        if summoner_name.lower() in name_set:
-            stats = player.get("stats", {})
-            damage = stats.get("TOTAL_DAMAGE_DEALT_TO_CHAMPIONS", 0)
-            champion = player.get("championName", "Unknown")
+    for player in _iter_players(eog_data):
+        raw_name = _player_name(player)
+        seen_names.append(raw_name)
+        if _norm(raw_name) in name_set:
             results.append({
-                "name": summoner_name,
-                "champion": champion,
-                "damage": int(damage),
+                "name": raw_name,
+                "champion": _pick(player, CHAMPION_FIELDS, "Unknown"),
+                "damage": _player_damage(player),
             })
 
-    # 딜량 내림차순 정렬
+    if not results:
+        print(f"[LCU] 참여자 매칭 실패. 입력: {list(name_set)} / EOG 이름들: {seen_names}")
+        _dump_eog(eog_data)
+
     results.sort(key=lambda x: x["damage"], reverse=True)
     return results
