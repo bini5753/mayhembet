@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>증강 칼바람 딜량 내기</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0e17;
+            --surface: #111827;
+            --surface2: #1a2236;
+            --border: #2a3550;
+            --text: #e2e8f0;
+            --text-dim: #8892a8;
+            --accent: #f59e0b;
+            --accent2: #ef4444;
+            --green: #22c55e;
+            --blue: #3b82f6;
+            --purple: #a855f7;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(135deg, #111827 0%, #1a1040 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--accent), #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .lcu-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+        .lcu-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--accent2);
+        }
+        .lcu-dot.connected { background: var(--green); }
+
+        /* ── Container ── */
+        .container { max-width: 800px; margin: 0 auto; padding: 24px; }
+
+        /* ── Cards ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--accent);
+        }
+
+        /* ── Forms ── */
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        input::placeholder { color: var(--text-dim); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #d97706);
+            color: #000;
+        }
+        .btn-danger {
+            background: var(--accent2);
+            color: #fff;
+        }
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+        .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+        .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+        /* ── Participant inputs ── */
+        .participant-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .participant-row input { margin-bottom: 0; flex: 1; }
+        .participant-num {
+            width: 24px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            text-align: center;
+        }
+
+        /* ── Rules ── */
+        .rule-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .rule-row span { color: var(--text-dim); white-space: nowrap; }
+        .rule-row input {
+            width: 120px;
+            margin-bottom: 0;
+            text-align: right;
+        }
+
+        /* ── Match Results ── */
+        .match-card {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .match-num {
+            font-weight: 700;
+            font-size: 15px;
+        }
+        .match-time { font-size: 12px; color: var(--text-dim); }
+
+        .ranking-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+        }
+        .ranking-row:nth-child(1) { background: rgba(245, 158, 11, 0.1); }
+        .ranking-row:nth-child(2) { background: rgba(148, 163, 184, 0.08); }
+        .rank-badge {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+            margin-right: 12px;
+        }
+        .rank-1 { background: var(--accent); color: #000; }
+        .rank-2 { background: #94a3b8; color: #000; }
+        .rank-3 { background: #b45309; color: #fff; }
+        .rank-4, .rank-5 { background: var(--border); color: var(--text-dim); }
+        .ranking-name { flex: 1; font-weight: 500; }
+        .ranking-champ { color: var(--text-dim); font-size: 13px; margin-right: 12px; }
+        .ranking-dmg { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+        /* ── Settlement ── */
+        .settlement-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 15px;
+        }
+        .settlement-total.positive {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+        .settlement-total.negative {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .amount-positive { color: var(--green); }
+        .amount-negative { color: var(--accent2); }
+
+        .transfer-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--surface2);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .transfer-arrow { color: var(--accent); font-weight: 700; }
+        .transfer-amount { margin-left: auto; font-weight: 700; color: var(--accent); }
+
+        /* ── Views ── */
+        .view { display: none; }
+        .view.active { display: block; }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--surface);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .tab.active {
+            background: var(--surface2);
+            color: var(--text);
+        }
+
+        /* ── Empty state ── */
+        .empty {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-dim);
+        }
+        .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+        /* ── Utils ── */
+        .flex { display: flex; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mt-4 { margin-top: 16px; }
+        .text-center { text-align: center; }
+        .text-dim { color: var(--text-dim); }
+        .text-sm { font-size: 13px; }
+
+        .waiting-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <h1>⚔️ 딜량 내기</h1>
+    <div class="lcu-status">
+        <div class="lcu-dot" id="lcuDot"></div>
+        <span id="lcuText">연결 확인중...</span>
+    </div>
+</div>
+
+<div class="container">
+
+    <!-- ====== VIEW: Setup (방 생성) ====== -->
+    <div class="view active" id="viewSetup">
+        <div class="card">
+            <div class="card-title">새 내기 만들기</div>
+
+            <label>방 이름</label>
+            <input type="text" id="roomName" placeholder="오늘의 딜량 내기" value="딜량 내기">
+
+            <label>참여 인원</label>
+            <select id="playerCount" onchange="renderParticipants()">
+                <option value="2">2명</option>
+                <option value="3">3명</option>
+                <option value="4">4명</option>
+                <option value="5">5명</option>
+            </select>
+
+            <label>참여자 소환사명</label>
+            <div id="participantsArea"></div>
+
+            <div class="mt-3">
+                <label>순위별 정산 규칙 (매 판)</label>
+                <div id="rulesArea"></div>
+                <p class="text-sm text-dim mt-2">* 높은 등수(꼴등 쪽)가 낮은 등수(1등 쪽)에게 지불</p>
+            </div>
+
+            <div class="mt-4 text-center">
+                <button class="btn btn-primary" onclick="createRoom()" style="width:100%">
+                    내기 시작하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== VIEW: Active Game (진행중) ====== -->
+    <div class="view" id="viewActive">
+        <div class="tabs">
+            <div class="tab active" data-tab="games" onclick="switchTab('games')">게임 결과</div>
+            <div class="tab" data-tab="settlement" onclick="switchTab('settlement')">정산</div>
+        </div>
+
+        <!-- Tab: 게임 결과 -->
+        <div id="tabGames">
+            <div class="card" style="text-align:center; padding:16px;">
+                <span id="activeRoomName" style="font-weight:700;"></span>
+                <span class="text-dim text-sm"> — </span>
+                <span id="activeMatchCount" class="text-dim text-sm"></span>
+                <span class="text-dim text-sm"> | </span>
+                <span id="activeGamePhase" class="text-dim text-sm waiting-pulse">게임 대기중...</span>
+            </div>
+
+            <div id="matchResults"></div>
+
+            <div class="empty" id="noMatches">
+                <div class="empty-icon">🎮</div>
+                <p>아직 진행된 게임이 없습니다</p>
+                <p class="text-sm text-dim mt-2">게임이 끝나면 자동으로 기록됩니다</p>
+            </div>
+
+            <!-- 수동 입력 (테스트용) -->
+            <div class="card mt-3" style="border-style:dashed;">
+                <div class="card-title" style="font-size:13px; color:var(--text-dim);">수동 입력 (테스트/LCU 안 될 때)</div>
+                <div id="manualInputArea"></div>
+                <button class="btn btn-ghost btn-sm mt-2" onclick="submitManual()">수동 기록</button>
+            </div>
+        </div>
+
+        <!-- Tab: 정산 -->
+        <div id="tabSettlement" style="display:none;">
+            <div id="settlementContent"></div>
+        </div>
+
+        <div class="mt-3 text-center flex gap-2" style="justify-content:center;">
+            <button class="btn btn-danger btn-sm" onclick="endRoom()">내기 종료 & 최종 정산</button>
+        </div>
+    </div>
+
+    <!-- ====== VIEW: Final Settlement (최종 정산) ====== -->
+    <div class="view" id="viewFinal">
+        <div class="card">
+            <div class="card-title" style="font-size:20px; text-align:center;">🏆 최종 정산</div>
+            <div id="finalContent"></div>
+            <div class="mt-4 text-center">
+                <button class="btn btn-primary" onclick="resetToSetup()">새 내기 만들기</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── State ──
+let currentRoom = null;
+let pollTimer = null;
+
+// ── View Management ──
+function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+}
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    document.getElementById('tabGames').style.display = tab === 'games' ? '' : 'none';
+    document.getElementById('tabSettlement').style.display = tab === 'settlement' ? '' : 'none';
+    if (tab === 'settlement') loadSettlement();
+}
+
+// ── Setup: Participant & Rule Rendering ──
+function renderParticipants() {
+    const count = parseInt(document.getElementById('playerCount').value);
+    const area = document.getElementById('participantsArea');
+    area.innerHTML = '';
+    for (let i = 1; i <= count; i++) {
+        area.innerHTML += `
+            <div class="participant-row">
+                <span class="participant-num">${i}</span>
+                <input type="text" id="p${i}" placeholder="소환사명 ${i}">
+            </div>`;
+    }
+    renderRules(count);
+}
+
+function renderRules(count) {
+    const area = document.getElementById('rulesArea');
+    area.innerHTML = '';
+    // 기본: 각 등수가 바로 위 등수에게 지불
+    for (let rank = count; rank >= 2; rank--) {
+        area.innerHTML += `
+            <div class="rule-row">
+                <span>${rank}등 →</span>
+                <span>${rank - 1}등에게</span>
+                <input type="number" id="rule_${rank}_${rank-1}" placeholder="금액" value="1000">
+                <span>원</span>
+            </div>`;
+    }
+}
+
+// ── Setup: Create Room ──
+async function createRoom() {
+    const count = parseInt(document.getElementById('playerCount').value);
+    const name = document.getElementById('roomName').value || '딜량 내기';
+
+    const participants = [];
+    for (let i = 1; i <= count; i++) {
+        const val = document.getElementById(`p${i}`).value.trim();
+        if (!val) return alert(`참여자 ${i}의 소환사명을 입력하세요`);
+        participants.push(val);
+    }
+
+    // 중복 체크
+    if (new Set(participants.map(p => p.toLowerCase())).size !== participants.length) {
+        return alert('중복된 소환사명이 있습니다');
+    }
+
+    const rules = [];
+    for (let rank = count; rank >= 2; rank--) {
+        const input = document.getElementById(`rule_${rank}_${rank-1}`);
+        if (input) {
+            const amount = parseInt(input.value) || 0;
+            if (amount > 0) {
+                rules.push({ from_rank: rank, to_rank: rank - 1, amount });
+            }
+        }
+    }
+
+    if (!rules.length) return alert('정산 규칙을 하나 이상 설정하세요');
+
+    const resp = await fetch('/api/room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, participants, rules })
+    });
+    const data = await resp.json();
+    if (data.error) return alert(data.error);
+
+    loadActiveRoom();
+}
+
+// ── Active Room ──
+async function loadActiveRoom() {
+    const resp = await fetch('/api/room/active');
+    const data = await resp.json();
+
+    if (data.room) {
+        currentRoom = data.room;
+        showView('viewActive');
+        renderActiveRoom();
+        renderManualInput();
+        startPolling();
+    } else {
+        showView('viewSetup');
+        renderParticipants();
+    }
+}
+
+function renderActiveRoom() {
+    if (!currentRoom) return;
+
+    document.getElementById('activeRoomName').textContent = currentRoom.name;
+    document.getElementById('activeMatchCount').textContent = `${currentRoom.matches.length}판 진행`;
+
+    const container = document.getElementById('matchResults');
+    const noMatches = document.getElementById('noMatches');
+
+    if (!currentRoom.matches.length) {
+        container.innerHTML = '';
+        noMatches.style.display = '';
+        return;
+    }
+    noMatches.style.display = 'none';
+
+    // 최신 순
+    const sorted = [...currentRoom.matches].reverse();
+    container.innerHTML = sorted.map(m => `
+        <div class="match-card">
+            <div class="match-header">
+                <span class="match-num">${m.match_number}판</span>
+                <span class="match-time">${m.created_at ? new Date(m.created_at).toLocaleTimeString('ko') : ''}</span>
+            </div>
+            ${m.results.map((r, i) => `
+                <div class="ranking-row">
+                    <div class="rank-badge rank-${i+1}">${i+1}</div>
+                    <span class="ranking-name">${r.name}</span>
+                    <span class="ranking-champ">${r.champion}</span>
+                    <span class="ranking-dmg">${Number(r.damage).toLocaleString()}</span>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+}
+
+// ── Manual Input ──
+function renderManualInput() {
+    if (!currentRoom) return;
+    const area = document.getElementById('manualInputArea');
+    area.innerHTML = currentRoom.participants.map((p, i) => `
+        <div class="participant-row">
+            <span class="participant-num" style="width:auto; min-width:80px; text-align:left; color:var(--text);">${p.summoner_name}</span>
+            <input type="number" id="manual_dmg_${i}" placeholder="딜량">
+        </div>
+    `).join('');
+}
+
+async function submitManual() {
+    if (!currentRoom) return;
+
+    const results = currentRoom.participants.map((p, i) => ({
+        name: p.summoner_name,
+        champion: "수동입력",
+        damage: parseInt(document.getElementById(`manual_dmg_${i}`).value) || 0
+    }));
+
+    // 딜량 내림차순 정렬
+    results.sort((a, b) => b.damage - a.damage);
+
+    if (results.every(r => r.damage === 0)) return alert('딜량을 입력하세요');
+
+    const resp = await fetch(`/api/room/${currentRoom.id}/match`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results })
+    });
+    const data = await resp.json();
+    if (data.error) return alert(data.error);
+
+    // 입력 초기화
+    currentRoom.participants.forEach((_, i) => {
+        document.getElementById(`manual_dmg_${i}`).value = '';
+    });
+
+    loadActiveRoom();
+}
+
+// ── Settlement ──
+async function loadSettlement() {
+    if (!currentRoom || !currentRoom.matches.length) {
+        document.getElementById('settlementContent').innerHTML =
+            '<div class="empty"><p class="text-dim">진행된 게임이 없습니다</p></div>';
+        return;
+    }
+
+    const resp = await fetch(`/api/room/${currentRoom.id}/settlement`);
+    const data = await resp.json();
+    if (data.error) {
+        document.getElementById('settlementContent').innerHTML =
+            `<div class="empty"><p class="text-dim">${data.error}</p></div>`;
+        return;
+    }
+
+    renderSettlement(data.settlement, 'settlementContent');
+}
+
+function renderSettlement(settlement, containerId) {
+    const container = document.getElementById(containerId);
+
+    // 개인별 누적
+    const totalsHtml = Object.entries(settlement.totals)
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, amount]) => `
+            <div class="settlement-total ${amount >= 0 ? 'positive' : 'negative'}">
+                <span>${name}</span>
+                <span class="${amount >= 0 ? 'amount-positive' : 'amount-negative'}">
+                    ${amount >= 0 ? '+' : ''}${amount.toLocaleString()}원
+                </span>
+            </div>
+        `).join('');
+
+    // 최종 송금
+    const transfersHtml = settlement.final_transfers.length
+        ? settlement.final_transfers.map(t => `
+            <div class="transfer-row">
+                <span style="font-weight:700;">${t.from}</span>
+                <span class="transfer-arrow">→</span>
+                <span style="font-weight:700;">${t.to}</span>
+                <span class="transfer-amount">${t.amount.toLocaleString()}원</span>
+            </div>
+        `).join('')
+        : '<p class="text-dim text-center">정산할 금액이 없습니다</p>';
+
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-title">누적 수익</div>
+            ${totalsHtml}
+        </div>
+        <div class="card">
+            <div class="card-title">💸 송금 안내</div>
+            ${transfersHtml}
+        </div>
+    `;
+}
+
+// ── End Room ──
+async function endRoom() {
+    if (!currentRoom) return;
+    if (!confirm(`${currentRoom.matches.length}판 결과로 최종 정산할까요?`)) return;
+
+    // 정산 데이터 로드
+    let settlement = null;
+    if (currentRoom.matches.length) {
+        const resp = await fetch(`/api/room/${currentRoom.id}/settlement`);
+        const data = await resp.json();
+        settlement = data.settlement;
+    }
+
+    // 방 종료
+    await fetch(`/api/room/${currentRoom.id}/close`, { method: 'POST' });
+    stopPolling();
+
+    if (settlement) {
+        showView('viewFinal');
+        renderSettlement(settlement, 'finalContent');
+    } else {
+        resetToSetup();
+    }
+}
+
+function resetToSetup() {
+    currentRoom = null;
+    showView('viewSetup');
+    renderParticipants();
+}
+
+// ── Polling ──
+function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(async () => {
+        // LCU 상태
+        try {
+            const lcuResp = await fetch('/api/lcu/status');
+            const lcuData = await lcuResp.json();
+            const dot = document.getElementById('lcuDot');
+            const text = document.getElementById('lcuText');
+            if (lcuData.connected) {
+                dot.classList.add('connected');
+                const name = lcuData.summoner ? `${lcuData.summoner.name}` : '연결됨';
+                text.textContent = name;
+                // 게임 상태
+                const phase = lcuData.gameflow_phase;
+                const phaseEl = document.getElementById('activeGamePhase');
+                if (phaseEl) {
+                    const phaseMap = {
+                        'None': '로비 대기중',
+                        'Lobby': '로비',
+                        'Matchmaking': '매칭중',
+                        'ReadyCheck': '수락 대기',
+                        'ChampSelect': '챔피언 선택',
+                        'InProgress': '🔴 게임 진행중',
+                        'EndOfGame': '✅ 게임 종료!',
+                        'PreEndOfGame': '게임 종료 처리중...',
+                        'WaitingForStats': '통계 로딩중...',
+                    };
+                    phaseEl.textContent = phaseMap[phase] || phase || '대기중';
+                    phaseEl.classList.toggle('waiting-pulse', phase !== 'InProgress' && phase !== 'EndOfGame');
+                }
+            } else {
+                dot.classList.remove('connected');
+                text.textContent = '롤 클라이언트 미연결';
+            }
+        } catch (e) {}
+
+        // 방 데이터 갱신
+        if (currentRoom) {
+            const resp = await fetch(`/api/room/${currentRoom.id}`);
+            const data = await resp.json();
+            if (data.room && data.room.matches.length !== currentRoom.matches.length) {
+                currentRoom = data.room;
+                renderActiveRoom();
+                document.getElementById('activeMatchCount').textContent =
+                    `${currentRoom.matches.length}판 진행`;
+            }
+        }
+    }, 3000);
+}
+
+function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+// ── LCU Status (initial) ──
+async function checkLCU() {
+    try {
+        const resp = await fetch('/api/lcu/status');
+        const data = await resp.json();
+        const dot = document.getElementById('lcuDot');
+        const text = document.getElementById('lcuText');
+        if (data.connected) {
+            dot.classList.add('connected');
+            text.textContent = data.summoner ? data.summoner.name : '연결됨';
+        } else {
+            dot.classList.remove('connected');
+            text.textContent = '롤 클라이언트 미연결';
+        }
+    } catch (e) {
+        document.getElementById('lcuText').textContent = '서버 연결 실패';
+    }
+}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', () => {
+    checkLCU();
+    renderParticipants();
+    loadActiveRoom();
+});
+</script>
+</body>
+</html>
